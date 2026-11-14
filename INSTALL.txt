@@ -1,0 +1,60 @@
+OpenSesame v1.0 — quick install
+================================
+
+WHAT'S IN THIS ZIP
+  UnhideDxe.efi  - the driver. Re-flips the AMI hide flag every boot.
+  UnhideApp.efi  - one-shot version: flips the flag for this session only,
+                   then chain-loads UMAF (Loader.efi) if it finds one.
+  setup_var.efi  - third-party tool for the "Verify first" flow in README.md:
+                   reads/writes single UEFI variable bytes from a shell.
+  UMAF.efi       - third-party setup browser for the same verify flow;
+                   Loader.efi is its launcher.
+  README.md      - full documentation.
+  INSTALL.txt    - this file.
+
+BEFORE YOU START
+  You need: an AMI Aptio firmware machine, a FAT32 USB stick (or access to
+  your ESP), and a way to run a UEFI shell (OpenCore's shell, a shell.efi on
+  the stick, or your firmware's built-in shell).
+
+STEP 1 — CHECK YOUR FIRMWARE (2 minutes)
+  Boot a UEFI shell and run:
+      dmpstore SetupHideFeatures
+  If it prints the variable (GUID F4D2228D-2E49-499D-9BBE-DF51E50AC711),
+  your firmware gates its menus with this flag and OpenSesame applies.
+  If "not found", your firmware uses a different mechanism — stop here.
+
+STEP 2 — PUT THE DRIVER ON THE STICK / ESP
+  Copy UnhideDxe.efi to the root of your FAT32 stick (or your ESP).
+  In the UEFI shell the stick is usually FS0: — check with:  map -r
+
+STEP 3 — REGISTER THE DRIVER (one time)
+  In the UEFI shell:
+      bcfg driver dump                 (see existing entries)
+      bcfg driver add 0 FS0:\UnhideDxe.efi "UnhideDxe"
+  If slot 0 is taken, use any free number. The entry is stored in your
+  firmware's DriverOrder and survives reboots. Nothing touches SPI flash.
+
+STEP 4 — REBOOT INTO SETUP
+  Reboot, press F2. The full menu tree (Advanced, Chipset, ...) is drawn.
+  Settings you change here save through the firmware's own save path and
+  persist like any stock setting.
+
+STEP 5 — VERIFY (optional)
+  Back in a UEFI shell:
+      dmpstore UnhideStat
+  Byte 3 should be 00 (flag value after the driver's flip).
+  Full byte layout is in README.md.
+
+ONE-SHOT ALTERNATIVE
+  Don't want a permanent driver? Just run UnhideApp.efi from a picker or
+  shell: it flips the flag for the current session only.
+
+REMOVAL
+      bcfg driver rm <n>     (the number from: bcfg driver dump)
+  Delete the entry and the machine is 100% stock. Nothing was ever flashed.
+
+WARNINGS
+  Only tested on Acer Aspire 3 A324-51, BIOS DN21CV214. Hidden settings can
+  make a machine unbootable if set badly — know your CMOS-reset / recovery
+  path first. Not affiliated with Acer or AMI. MIT license; see README.md.
